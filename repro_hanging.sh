@@ -74,6 +74,27 @@ printf "\n\n"
 
 sleep 1
 
+# Rerun with remote execution for less than eight problematic targets, on a new output base to avoid reusing persistent action cache
+workdir=$(mktemp -d -p /tmp)
+bazel --output_base="$workdir" build //:less_than_eight_files --remote_cache=grpc://localhost:9092 --remote_executor=grpc://localhost:8980
+bazel_exit=$?
+echo "Bazel exited with ${bazel_exit}"
+
+printf "\n\n"
+
+kill $BAZEL_REMOTE_PID
+
+sleep 1
+
+printf "\n\n"
+echo "Removing the cache objects..."
+find "$CACHE_DIR/cas.v2/" -type f -delete
+
+$BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check --disable_http_ac_validation &
+BAZEL_REMOTE_PID=$!
+
+sleep 1
+
 # Rerun with remote execution to trigger the hanging behavior, on a new output base to avoid reusing persistent action cache
 workdir=$(mktemp -d -p /tmp)
 bazel --output_base="$workdir" build //:all_files --remote_cache=grpc://localhost:9092 --remote_executor=grpc://localhost:8980

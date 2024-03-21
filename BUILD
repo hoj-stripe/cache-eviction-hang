@@ -22,3 +22,11 @@ genrule(
     cmd = "cat $(SRCS) > $@",
     tags = ["manual"],
 )
+
+genrule(
+    name = "less_than_eight_files",
+    srcs = ["file_%d" % num for num in range(6)],
+    outs = ["example_file_2"],
+    cmd = "cat $(SRCS) > $@",
+    tags = ["manual"],
+)
