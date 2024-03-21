@@ -1,0 +1,5 @@
+build --incompatible_strict_action_env
+
+build --remote_download_toplevel
+build --disk_cache=
+build -c opt

@@ -1,1 +1,3 @@
-a
+- Use Bazelisk
+- Clone https://github.com/buildbarn/bb-deployments/ then run `WORKDIR=$(mktemp -d -p /tmp) && bazel run -- //bare:bare $WORKDIR` in it
+- While the above is running, run `./repro_hanging.sh` and/or `./repro_34_exit.sh`
