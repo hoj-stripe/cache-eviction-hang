@@ -8,7 +8,7 @@ export BAZEL_REMOTE_SHA_darwin_arm64="7ceb05ff3014c8517fd4eb38ba18763fb20b0aa540
 export BAZEL_REMOTE_SHA_linux_x86_64="5e4b248262a56e389e9ee4212ffd0498746347fb5bf155785c9410ba2abc7b07"
 export BAZEL_REMOTE_SHA_linux_arm64=""
 
-VERSION="2.4.1"
+VERSION="2.4.3"
 url="https://github.com/buchgr/bazel-remote/releases/download/v${VERSION}/bazel-remote-${VERSION}-${platform}-${arch}"
 
 mkdir -p .cache
@@ -53,12 +53,12 @@ trap cleanup EXIT
 
 bazel clean --expunge
 
-# build all the dependencies to populate the inputs in the cache
+# Build all the dependencies to populate the inputs in the cache.
 bazel build //... --remote_cache=grpc://localhost:9092
 bazel_exit=$?
 echo "Bazel exited with ${bazel_exit}"
 
-# restart the remote cache to clear out in-memory state, to simulate cache eviction
+# Shut down the remote cache to clear out in-memory state, to simulate cache eviction.
 kill $BAZEL_REMOTE_PID
 
 sleep 1
@@ -67,15 +67,21 @@ printf "\n\n"
 echo "Removing the CAS objects..."
 find "$CACHE_DIR/cas.v2/" -type f -delete
 
-# disable ac validation to trigger ByteStream.Read error when fetching a file for action input
-$BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check --disable_http_ac_validation &
+# Restart the remote cache with fresh memory. Disable ac validation to trigger
+# ByteStream.Read error when fetching a file for action input. Cache with no CAS
+# entries and with no AC validation simulates cache eviction after we went
+# through all `GetActionResult` calls.
+$BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check &
 BAZEL_REMOTE_PID=$!
 
 printf "\n\n"
 
 sleep 1
 
-# Rerun with remote execution for less than eight problematic targets, on a new output base to avoid reusing persistent action cache
+# Rerun with remote execution to trigger the hanging behavior, on a new output
+# base to avoid reusing persistent action cache, simulating a Bazel invocation
+# in a different machine. The remote_executor option can be any nonsense string,
+# as Bazel never attempts to reach the remote executor.
 workdir=$(mktemp -d -p /tmp)
 bazel --output_base="$workdir" build //:less_than_eight_files --remote_cache=grpc://localhost:9092 --remote_executor=grpc://localhost:8980
 bazel_exit=$?
@@ -83,7 +89,7 @@ echo "Bazel exited with ${bazel_exit}"
 
 printf "\n\n"
 
-# restart the remote cache to clear out in-memory state, to simulate cache eviction
+# shut down the remote cache to clear out in-memory state, to simulate cache eviction
 kill $BAZEL_REMOTE_PID
 
 sleep 1
@@ -92,13 +98,18 @@ printf "\n\n"
 echo "Removing the cache objects..."
 find "$CACHE_DIR/cas.v2/" -type f -delete
 
-# disable ac validation to trigger ByteStream.Read error when fetching a file for action input
-$BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check --disable_http_ac_validation &
+# Restart the remote cache with fresh memory. Disable ac validation to trigger
+# ByteStream.Read error when fetching a file for action input, which simulates
+# cache eviction after we went through all `GetActionResult` calls.
+$BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check &
 BAZEL_REMOTE_PID=$!
 
 sleep 1
 
-# Rerun with remote execution to trigger the hanging behavior, on a new output base to avoid reusing persistent action cache
+# Rerun with remote execution to trigger the hanging behavior, on a new output
+# base to avoid reusing persistent action cache, simulating a Bazel invocation
+# in a different machine. The remote_executor option can be any nonsense string,
+# as Bazel never attempts to reach the remote executor.
 workdir=$(mktemp -d -p /tmp)
 bazel --output_base="$workdir" build //:all_files --remote_cache=grpc://localhost:9092 --remote_executor=grpc://localhost:8980
 bazel_exit=$?
