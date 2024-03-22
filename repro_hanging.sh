@@ -58,6 +58,7 @@ bazel build //... --remote_cache=grpc://localhost:9092
 bazel_exit=$?
 echo "Bazel exited with ${bazel_exit}"
 
+# restart the remote cache to clear out in-memory state, to simulate cache eviction
 kill $BAZEL_REMOTE_PID
 
 sleep 1
@@ -66,7 +67,7 @@ printf "\n\n"
 echo "Removing the CAS objects..."
 find "$CACHE_DIR/cas.v2/" -type f -delete
 
-# disable ac validation to rely on remote metadata
+# disable ac validation to trigger ByteStream.Read error when fetching a file for action input
 $BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check --disable_http_ac_validation &
 BAZEL_REMOTE_PID=$!
 
@@ -82,6 +83,7 @@ echo "Bazel exited with ${bazel_exit}"
 
 printf "\n\n"
 
+# restart the remote cache to clear out in-memory state, to simulate cache eviction
 kill $BAZEL_REMOTE_PID
 
 sleep 1
@@ -90,6 +92,7 @@ printf "\n\n"
 echo "Removing the cache objects..."
 find "$CACHE_DIR/cas.v2/" -type f -delete
 
+# disable ac validation to trigger ByteStream.Read error when fetching a file for action input
 $BAZEL_REMOTE --dir "$CACHE_DIR" --max_size 1 --disable_grpc_ac_deps_check --disable_http_ac_validation &
 BAZEL_REMOTE_PID=$!
 

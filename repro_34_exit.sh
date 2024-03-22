@@ -58,6 +58,7 @@ bazel build //... --remote_cache=grpc://localhost:9092
 bazel_exit=$?
 echo "Bazel exited with ${bazel_exit}"
 
+# restart the remote cache to clear out in-memory state, to simulate cache eviction
 kill $BAZEL_REMOTE_PID
 
 sleep 1
